@@ -21,8 +21,17 @@ void EchoServer() {
   if (bind(socketS, (struct sockaddr *)&Structure_t, sizeof(Structure_t)) !=
           -1 ||
       errno) {
-    printf("%s Socket bind created successfully", AC_GREEN);
-  };
+    printf("%s Socket bind created successfully \n", AC_GREEN);
+
+  } else {
+    printf("%s Error Occurred \n", AC_RED);
+  }
+
+  if (listen(socketS, 10) != -1 || errno) {
+    printf("%s Socket turned into a passive server\n", AC_GREEN);
+  } else {
+    printf("%s Error Occurred >-<\n", AC_RED);
+  }
 }
 
 int main() { EchoServer(); }
