@@ -1,6 +1,5 @@
 #include "AsciiColors.h"
 #include "printBytes.h"
-#include <bits/sockaddr.h>
 #include <errno.h>
 #include <netinet/in.h>
 // #include <stdio.h>
@@ -46,8 +45,7 @@ void ErrorLog(char *message) {
   printf("%s [ERROR] %s %s %s\n ", AC_RED, message, strerror(errno), AC_WHITE);
 }
 void SuccessLog(char *message) {
-  printf("%s [SUCCESS] %s %s %s\n", AC_GREEN, message, strerror(errno),
-         AC_WHITE);
+  printf("%s [SUCCESS] %s  %s\n", AC_GREEN, message, AC_WHITE);
 }
 void EchoServer() {
   int socketS, socketC;
@@ -108,10 +106,11 @@ void EchoServer() {
       SuccessLog("Writing...");
       print_bytes(&ReadFileDescriptor, sizeof(ReadFileDescriptor));
     }
+
+    close(socketC);
   }
 
-  shutdown(socketC, SHUT_RDWR);
-  shutdown(socketS, SHUT_RDWR);
+  close(socketS);
 }
 
 int main() {
