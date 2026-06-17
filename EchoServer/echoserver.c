@@ -3,12 +3,12 @@
 #include <bits/sockaddr.h>
 #include <netinet/in.h>
 // #include <stdio.h>
+#include <dirent.h>
+#include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/socket.h>
-
-#include <dirent.h>
-#include <stdio.h>
+#include <unistd.h>
 
 void print_my_fds() {
   DIR *d = opendir("/proc/self/fd/");
@@ -39,6 +39,13 @@ void print_my_fds() {
   closedir(d);
 }
 
+void ErrorLog(char *message) {
+
+  printf("%s [ERROR] %s %s\n ", AC_RED, message, AC_WHITE);
+}
+void SuccessLog(char *message) {
+  printf("%s [SUCCESS] %s %s\n", AC_GREEN, message, AC_WHITE);
+}
 void EchoServer() {
   int socketS, socketC;
 
@@ -53,18 +60,18 @@ void EchoServer() {
 
   if (bind(socketS, (struct sockaddr *)&Structure_t, Structure_tLen) < 0) {
 
-    printf("%s [corethreads] Error Occurred \n", AC_RED);
+    ErrorLog("Socket Not Bound");
 
   } else {
-    printf("%s [corethreads] Socket bind created successfully \n", AC_GREEN);
+    SuccessLog("Socket Bound SuccessFully...");
   }
 
   if (listen(socketS, 10) < 0) {
 
-    printf("%s [corethreads] Error Occurred \n", AC_RED);
+    ErrorLog("[corethreads] Error Occurred");
 
   } else {
-    printf("%s [corethreads] Socket turned into a passive server\n", AC_GREEN);
+    SuccessLog("[corethreads] Socket turned into a passive server");
   }
 
   struct sockaddr_in Client_Structure;
@@ -74,10 +81,20 @@ void EchoServer() {
     socketC = accept(socketS, (struct sockaddr *)&Client_Structure, &clientLen);
     print_bytes(&socketC, sizeof(socketC));
     if (socketC < 0) {
-      printf("%s [corethreads] Error Occurred\n", AC_RED);
+      ErrorLog("[corethreads] Error Occurred");
     } else {
 
-      printf("%s [corethreads] Connection Established[+].....\n ", AC_GREEN);
+      SuccessLog("[corethreads] Connection Established[+]..... ");
+    }
+
+    char MessageStore[1024] = {0};
+    ssize_t ReadFileDescriptor;
+    ReadFileDescriptor = read(socketC, MessageStore, 1023);
+
+    if (ReadFileDescriptor < 0) {
+      ErrorLog("Nothing Read in File Descriptor");
+    } else {
+      SuccessLog("File Descriptor read SuccessFully");
     }
   }
 }
