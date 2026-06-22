@@ -1,119 +1,159 @@
 #include "AsciiColors.h"
 #include "printBytes.h"
+#include <bits/posix1_lim.h>
 #include <errno.h>
 #include <netinet/in.h>
-// #include <stdio.h>
-#include <dirent.h>
-#include <stddef.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 #include <sys/socket.h>
 #include <unistd.h>
 
-void print_my_fds() {
-  DIR *d = opendir("/proc/self/fd/");
-  if (!d)
-    return;
+// CONSTANTS
+#define SOCKET_PORT 4040
+#define CONNECTION_LENGTH 10
+#define MESSAGE_BUFFER 1024
+#define BYTES_TO_READ (MESSAGE_BUFFER - 1)
 
-  // Get the internal FD number used by opendir itself
-  int opendir_fd = dirfd(d);
+// LOGGING PROGRAMS
+void error_log(char *message) {
+  printf("%s [ERROR] %s %s %s\n", AC_RED, message, strerror(errno), AC_WHITE);
+};
 
-  struct dirent *dir;
-  int count = 0;
+void success_log(char *message) {
+  printf("%s [SUCCESS] %s %s\n", AC_GREEN, message, AC_WHITE);
+};
 
-  printf("\n--- Active File Descriptors ---\n");
-  while ((dir = readdir(d)) != NULL) {
-    if (dir->d_name[0] != '.') {
-      int current_fd = atoi(dir->d_name);
+static int create_server_socket(void) {
+  int server_socket = socket(AF_INET, SOCK_STREAM, 0);
 
-      // Skip printing the temporary opendir file descriptor
-      if (current_fd == opendir_fd) {
-        continue;
-      }
-
-      printf("FD Number: %d\n", current_fd);
-      count++;
-    }
-  }
-  printf("Total Open FDs (Excluding opendir): %d\n", count);
-  closedir(d);
-}
-
-void ErrorLog(char *message) {
-
-  printf("%s [ERROR] %s %s %s\n ", AC_RED, message, strerror(errno), AC_WHITE);
-}
-void SuccessLog(char *message) {
-  printf("%s [SUCCESS] %s  %s\n", AC_GREEN, message, AC_WHITE);
-}
-void EchoServer() {
-  int socketS, socketC;
-
-  socketS = socket(AF_INET, SOCK_STREAM, 0);
-  print_bytes(&socketS, sizeof(socketS));
-
-  struct sockaddr_in Structure_t;
-  Structure_t.sin_family = AF_INET;
-  Structure_t.sin_port = htons(4040);
-  Structure_t.sin_addr.s_addr = INADDR_ANY; // to take any ip 0.0.0.0
-  socklen_t Structure_tLen = sizeof(Structure_t);
-
-  if (bind(socketS, (struct sockaddr *)&Structure_t, Structure_tLen) < 0) {
-
-    ErrorLog("Socket Not Bound");
-
-  } else {
-    SuccessLog("Socket Bound SuccessFully...");
+  if(server_socket < 0){
+    error_log("Failed to create socket");
+    return -1;
   }
 
-  if (listen(socketS, 10) < 0) {
+  success_log("Server Socket created SuccessFully");
+  print_bytes(&server_socket, sizeof(server_socket));
 
-    ErrorLog("[corethreads] Error Occurred");
+  return server_socket;
+};
 
-  } else {
-    SuccessLog("[corethreads] Socket turned into a passive server");
+static int bind_server_socket(int server_socket){
+  
+
+  struct sockaddr_in server_address;
+  socklen_t address_length = sizeof(server_address);
+
+  server_address.sin_family = AF_INET;
+  server_address.sin_addr.s_addr = INADDR_ANY;
+  server_address.sin_port = htons(SOCKET_PORT);
+  
+  if(bind(server_socket, (struct sockaddr *)&server_address, address_length) < 0){
+    error_log("Failed to bind to Socket");
+    return -1;
   }
 
-  struct sockaddr_in Client_Structure;
-  socklen_t clientLen = sizeof(Client_Structure);
+  success_log("Socket Bound SuccessFully");
+  return 0; 
+};
+
+static int start_listening(int server_socket){
+  
+  
+  if(listen(server_socket, CONNECTION_LENGTH) < 0 ){
+    error_log("Error Occured");
+    return -1;
+  }
+
+  success_log("Server Socket turned Passive SuccessFully");
+  return 0;
+}
+
+static int accept_client_connections(int server_socket){
+  
+  
+  struct sockaddr_in client_address;
+  socklen_t client_length = sizeof(client_address);
+
+  int client_socket = accept(server_socket, (struct sockaddr *)&client_address, &client_length);
+  if (client_socket < 0) {
+    error_log("Error Occured");
+    return -1;  
+  }
+
+  success_log("[+] Connection Established...");
+  return client_socket; 
+}
+
+static ssize_t recieve_client_message(int client_socket, char *messageBuffer, size_t buffer_size) {
+  ssize_t bytes_recieved = read(client_socket, messageBuffer, buffer_size);
+  if (bytes_recieved < 0) {
+    error_log("Failed to read client Message");
+    return -1;
+  }
+
+  success_log("Messages recieved from client");
+  return bytes_recieved;
+}
+
+static ssize_t write_to_client(int client_socket, char *message, size_t message_length) {
+  ssize_t bytes_written = write(client_socket, message, message_length);
+  if (bytes_written < 0) {
+    error_log("Failed writing to client");
+    return -1;
+  }
+
+  success_log("Message Written to Client");
+  return bytes_written;
+}
+
+static void handle_client_connection(int client_socket){
+  char message_buffer[MESSAGE_BUFFER] = {0};
+
+  ssize_t bytes_recieved = recieve_client_message(client_socket, message_buffer, BYTES_TO_READ);
+
+  if (bytes_recieved > 0) {
+    write_to_client(client_socket, message_buffer, bytes_recieved);
+  }
+
+  close(client_socket);
+  success_log("Client Socket Closed");
+}
+
+static void run_echo_server(int server_socket){
+  success_log("Echo Server Running");
 
   while (1) {
-    socketC = accept(socketS, (struct sockaddr *)&Client_Structure, &clientLen);
-    print_bytes(&socketC, sizeof(socketC));
-    if (socketC < 0) {
-      ErrorLog("[corethreads] Error Occurred");
-    } else {
+    int client_socket = accept_client_connections(server_socket);
+    
+    
+    handle_client_connection(client_socket);
+    
+  }
+};
 
-      SuccessLog("[corethreads] Connection Established[+]..... ");
-    }
+static void cleanup_server(int server_socket) {
+  close(server_socket);
+  success_log("Server Socket Closed SuccessFully");  
+};
 
-    char MessageStore[1024] = {0};
-    ssize_t ReadFileDescriptor, WriteDataFromFD;
-    ReadFileDescriptor = read(socketC, MessageStore, 1023);
+int main(void) {
+  int server_socket = create_server_socket();
 
-    if (ReadFileDescriptor < 0) {
-      ErrorLog("Nothing Read in File Descriptor");
-    } else {
-      SuccessLog("File Descriptor read SuccessFully");
-      print_bytes(&ReadFileDescriptor, sizeof(ReadFileDescriptor));
-    }
-
-    WriteDataFromFD = write(socketC, MessageStore, ReadFileDescriptor);
-    if (WriteDataFromFD < 0) {
-      ErrorLog("Nothing to Write");
-    } else {
-      SuccessLog("Writing...");
-      print_bytes(&ReadFileDescriptor, sizeof(ReadFileDescriptor));
-    }
-
-    close(socketC);
+  if(server_socket < 0){
+    return 1;
   }
 
-  close(socketS);
-}
+  if(bind_server_socket(server_socket) < 0){
+    close(server_socket);
+    return 1;
+  }
 
-int main() {
-  EchoServer();
-  print_my_fds();
-}
+  if(start_listening(server_socket) < 0) {
+    close(server_socket);
+    return 1;
+  }
+
+  run_echo_server(server_socket);
+  cleanup_server(server_socket);
+  return 0;
+};
