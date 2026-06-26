@@ -1,13 +1,7 @@
 #include "AsciiColors.h"
 #include "printBytes.h"
-<<<<<<< HEAD
-#include <asm-generic/socket.h>
-=======
-<<<<<<< HEAD
-=======
-#include <asm-generic/socket.h>
->>>>>>> 87ec6fe (Just modified my File Descriptor no reuse the address and port even though the timeout of socket i)
->>>>>>> 5388406
+
+
 #include <errno.h>
 #include <netinet/in.h>
 #include <stdio.h>
@@ -37,6 +31,7 @@ static int create_server_socket(void) {
     error_log("[ERROR] Failed to create socket");
     return -1;
   }
+  
 
   success_log("Server Socket created SuccessFully");
   // Modify the behaviour and settings of our File Descriptor
