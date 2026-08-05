@@ -1,13 +1,11 @@
 #include "AsciiColors.h"
 #include "printBytes.h"
-
-
 #include <errno.h>
-#include <netinet/in.h>
 #include <stdio.h>
 #include <string.h>
 #include <sys/socket.h>
 #include <unistd.h>
+#include <netinet/in.h>
 
 // CONSTANTS
 #define SOCKET_PORT 4040
@@ -96,8 +94,7 @@ static int accept_client_connections(int server_socket) {
   return client_socket;
 }
 
-static ssize_t recieve_client_message(int client_socket, char *messageBuffer,
-                                      size_t buffer_size) {
+static ssize_t recieve_client_message(int client_socket, char *messageBuffer,size_t buffer_size) {
   ssize_t bytes_recieved = read(client_socket, messageBuffer, buffer_size);
   if (bytes_recieved < 0) {
     error_log("Failed to read client Message");
@@ -108,8 +105,7 @@ static ssize_t recieve_client_message(int client_socket, char *messageBuffer,
   return bytes_recieved;
 }
 
-static ssize_t write_to_client(int client_socket, char *message,
-                               size_t message_length) {
+static ssize_t write_to_client(int client_socket, char *message,size_t message_length) {
   ssize_t bytes_written = write(client_socket, message, message_length);
   if (bytes_written < 0) {
     error_log("Failed writing to client");
