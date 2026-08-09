@@ -14,6 +14,9 @@
 void error_log(char *message);
 void success_log(char *message);
 
+//Handlers
+void process_handler(int sig);
+
 //Services
 int create_server_socket(void);
 int bind_server_socket(int server_socket);

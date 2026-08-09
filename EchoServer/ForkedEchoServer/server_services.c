@@ -8,6 +8,8 @@
 #include <netinet/in.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <sys/wait.h>
+
 
 void error_log(char *message){
   printf(" %s [error] %s %s %s\n",AC_RED,message, strerror(errno), AC_NORMAL);
@@ -18,6 +20,9 @@ void success_log(char *message){
   printf("%s [sucess] %s %s\n", AC_GREEN, message, AC_NORMAL);
 }
 
+void process_handler(int sig){
+    while(waitpid(-1,NULL, WNOHANG));
+}
 
 int create_server_socket(void){
   int server_socket = socket(AF_INET, SOCK_STREAM, 0);
@@ -138,6 +143,7 @@ int run_echo_server(int server_socket){
     if(childForks == 0){
     handle_client_communication(client_socket);
     printf("Child's PID: %d , PPID %d\n",getpid(), getppid() );
+    exit(0);
 
     }
   }
@@ -150,4 +156,5 @@ void server_cleanup(int server_socket){
   close(server_socket);
   success_log("Server Closed SuccessFully");
 }
+
 
